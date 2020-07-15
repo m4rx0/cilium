@@ -3268,7 +3268,7 @@ func (kub *Kubectl) DumpCiliumCommandOutput(ctx context.Context, namespace strin
 	kvstoreCmdCtx, cancel := context.WithTimeout(ctx, MidCommandTimeout)
 	defer cancel()
 	kub.reportMapContext(kvstoreCmdCtx, testPath, ciliumKubCLICommandsKVStore, namespace, CiliumSelector)
-
+	ginkgoext.GinkgoPrint("Num of pods: %v", len(pods))
 	for _, pod := range pods {
 		ReportOnPod(pod)
 		kub.GatherCiliumCoreDumps(ctx, pod)
@@ -3805,10 +3805,14 @@ func (kub *Kubectl) ciliumServicePreFlightCheck() error {
 // Function needs a directory path where the files are going to be written
 // commands are run on all pods matching selector
 func (kub *Kubectl) reportMapContext(ctx context.Context, path string, reportCmds map[string]string, ns, selector string) {
+	pods, err := kub.GetPodNamesContext(ctx, ns, selector)
+	if err != nil {
+		log.WithError(err).Errorf("cannot retrieve pod names with '%s': %s", selector, err)
+	}
 	for cmd, logfile := range reportCmds {
-		results, err := kub.ExecInPods(ctx, ns, selector, cmd, true, ExecOptions{SkipLog: true})
-		if err != nil {
-			log.WithError(err).Errorf("cannot retrieve command output '%s': %s", cmd, err)
+		results := make(map[string]*CmdRes)
+		for _, pod := range pods {
+			results[pod] = kub.ExecPodCmdBackground(ctx, ns, pod, cmd, ExecOptions{SkipLog: true})
 		}
 
 		for name, res := range results {
