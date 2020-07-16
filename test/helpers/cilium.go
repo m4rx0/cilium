@@ -366,8 +366,8 @@ func (s *SSHMeta) BasePath() string {
 // function which stops the monitor when the user needs. When the callback is
 // called the command will stop and monitor's output is saved on
 // `monitorLogFileName` file.
-func (s *SSHMeta) MonitorStart() func() error {
-	cmd := "cilium monitor -vv | ts '[%Y-%m-%d %H:%M:%S]'"
+func (s *SSHMeta) MonitorStart(opts ...string) func() error {
+	cmd := "cilium monitor -vv " + strings.Join(opts, " ") + " | ts '[%Y-%m-%d %H:%M:%S]'"
 	ctx, cancel := context.WithCancel(context.Background())
 	res := s.ExecInBackground(ctx, cmd, ExecOptions{SkipLog: true})
 

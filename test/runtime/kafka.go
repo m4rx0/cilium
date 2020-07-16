@@ -145,7 +145,7 @@ var _ = Describe("RuntimeKafka", func() {
 	})
 
 	JustBeforeEach(func() {
-		monitorStop = vm.MonitorStart()
+		monitorStop = vm.MonitorStart("--type l7")
 	})
 
 	JustAfterEach(func() {
@@ -187,14 +187,14 @@ var _ = Describe("RuntimeKafka", func() {
 		res.ExpectFail("Kafka consumer can access to disallowTopic")
 	})
 
-	It("Kafka Policy Role Ingress", func() {
+	It("Kafka Policy Role Egress", func() {
 		_, err := vm.PolicyImportAndWait(vm.GetFullPath("Policies-kafka-Role.json"), helpers.HelperTimeout)
 		Expect(err).Should(BeNil(), "Expected nil got %s while importing policy Policies-kafka-Role.json", err)
 
 		endPoints, err := vm.PolicyEndpointsSummary()
 		Expect(err).Should(BeNil(), "Expect nil. Failed to apply policy on all endpoints with error :%s", err)
-		Expect(endPoints[helpers.Enabled]).To(Equal(1), "Expected 1 endpoint to be policy enabled. Policy enforcement failed")
-		Expect(endPoints[helpers.Disabled]).To(Equal(3), "Expected 3 endpoint to be policy disabled. Policy enforcement failed")
+		Expect(endPoints[helpers.Enabled]).To(Equal(2), "Expected 2 endpoint to be policy enabled. Policy enforcement failed")
+		Expect(endPoints[helpers.Disabled]).To(Equal(2), "Expected 2 endpoint to be policy disabled. Policy enforcement failed")
 
 		By("Sending produce request on kafka topic `allowedTopic`")
 		for i := 1; i <= MaxMessages; i++ {
@@ -208,7 +208,7 @@ var _ = Describe("RuntimeKafka", func() {
 			Should(ContainSubstring("Processed a total of %d messages", MaxMessages),
 				"Kafka did not process the expected number of messages")
 
-		By("Disable topic")
+		By("Non-allowed topic")
 		// Consumer timeout didn't work correctly, so make sure that AUTH is present in the reply
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
