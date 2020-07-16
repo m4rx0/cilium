@@ -25,7 +25,7 @@ import (
 
 	"github.com/cilium/cilium/pkg/flowdebug"
 	"github.com/cilium/cilium/pkg/kafka"
-	"github.com/cilium/cilium/pkg/policy/api"
+	kafka_api "github.com/cilium/cilium/pkg/policy/api/kafka"
 	cilium "github.com/cilium/proxy/go/cilium/api"
 
 	log "github.com/sirupsen/logrus"
@@ -36,7 +36,7 @@ const (
 )
 
 type KafkaRule struct {
-	api.PortRuleKafka
+	kafka_api.PortRule
 }
 
 type KafkaRequest struct {
@@ -55,8 +55,8 @@ func (rule *KafkaRule) Matches(data interface{}) bool {
 		return false
 	}
 	if rule.Topic == "" || len(req.topics) == 0 {
-		return req.RuleMatches(&rule.PortRuleKafka)
-	} else if _, exists := req.topics[rule.Topic]; exists && req.RuleMatches(&rule.PortRuleKafka) {
+		return req.RuleMatches(&rule.PortRule)
+	} else if _, exists := req.topics[rule.Topic]; exists && req.RuleMatches(&rule.PortRule) {
 		delete(req.topics, rule.Topic)
 		return len(req.topics) == 0
 	}
@@ -91,7 +91,7 @@ func KafkaRuleParser(rule *cilium.PortNetworkPolicyRule) []L7NetworkPolicyRule {
 				ParseError(fmt.Sprintf("Unsupported key: %s", k), rule)
 			}
 		}
-		err := kr.PortRuleKafka.Sanitize()
+		err := kr.PortRule.Sanitize()
 		if err != nil {
 			panic("invalid Kafka rule")
 		}
@@ -251,7 +251,7 @@ func (p *KafkaParser) OnData(reply, endStream bool, dataArray [][]byte) (OpType,
 			Proto: parserName,
 			Fields: map[string]string{
 				"APIVersion":    strconv.Itoa(int(req.GetVersion())),
-				"APIKey":        apiKeyToString(req.GetAPIKey()),
+				"APIKey":        kafka_api.ApiKeyToString(req.GetAPIKey()),
 				"CorrelationID": strconv.Itoa(int(req.GetCorrelationID())),
 				"Topics":        strings.Join(topics, ","),
 			},
@@ -276,11 +276,4 @@ func (p *KafkaParser) OnData(reply, endStream bool, dataArray [][]byte) (OpType,
 
 	p.connection.Log(cilium.EntryType_Denied, logEntry)
 	return DROP, int(reader.count)
-}
-
-func apiKeyToString(apiKey int16) string {
-	if key, ok := api.KafkaReverseAPIKeyMap[apiKey]; ok {
-		return key
-	}
-	return fmt.Sprintf("%d", apiKey)
 }

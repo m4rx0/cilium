@@ -34,6 +34,7 @@ import (
 	"github.com/cilium/cilium/pkg/option"
 	"github.com/cilium/cilium/pkg/policy"
 	"github.com/cilium/cilium/pkg/policy/api"
+	"github.com/cilium/cilium/pkg/policy/api/kafka"
 	"github.com/cilium/cilium/pkg/proxy/logger"
 
 	cilium "github.com/cilium/proxy/go/cilium/api"
@@ -467,7 +468,7 @@ func getL7Rule(l7 *api.PortRuleL7) *cilium.L7NetworkPolicyRule {
 	return rule
 }
 
-func getKafkaL7Rules(l7Rules []api.PortRuleKafka) *cilium.L7NetworkPolicyRules {
+func getKafkaL7Rules(l7Rules []kafka.PortRule) *cilium.L7NetworkPolicyRules {
 	allowRules := make([]*cilium.L7NetworkPolicyRule, 0, len(l7Rules))
 	for _, kr := range l7Rules {
 		// proxylib go extension key/value policy
