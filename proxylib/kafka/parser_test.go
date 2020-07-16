@@ -84,15 +84,15 @@ func (s *KafkaSuite) TestKafkaOnDataNoHeader(c *C) {
 	data := hexData(c, "")
 	conn.CheckOnDataOK(c, false, false, &data, []byte{})
 	data = hexData(c, "00")
-	conn.CheckOnDataOK(c, false, false, &data, []byte{}, proxylib.MORE, 3)
+	conn.CheckOnDataOK(c, false, false, &data, []byte{}, proxylib.MORE, 7)
 	data = hexData(c, "0000")
-	conn.CheckOnDataOK(c, false, false, &data, []byte{}, proxylib.MORE, 2)
+	conn.CheckOnDataOK(c, false, false, &data, []byte{}, proxylib.MORE, 6)
 	data = hexData(c, "000001")
-	conn.CheckOnDataOK(c, false, false, &data, []byte{}, proxylib.MORE, 1)
+	conn.CheckOnDataOK(c, false, false, &data, []byte{}, proxylib.MORE, 5)
 	data = hexData(c, "00000100")
-	conn.CheckOnDataOK(c, false, false, &data, []byte{}, proxylib.MORE, 256)
+	conn.CheckOnDataOK(c, false, false, &data, []byte{}, proxylib.MORE, 4)
 	data = hexData(c, "00010000010203")
-	conn.CheckOnDataOK(c, false, false, &data, []byte{}, proxylib.MORE, 65536-3)
+	conn.CheckOnDataOK(c, false, false, &data, []byte{}, proxylib.MORE, 1)
 	data = hexData(c, "000100000102030405060708")
 	conn.CheckOnDataOK(c, false, false, &data, []byte{}, proxylib.MORE, 65536-8)
 }
@@ -183,7 +183,7 @@ func (s *KafkaSuite) TestKafkaOnDataSimpleHeaderWithPolicyDrop(c *C) {
 			0x0, 0x0, 0x0, 0x0, // 0 partitions
 			0x0, 0x0, 0x0, 0x0}, // ThrottleTime
 		proxylib.DROP, 4+42,
-		proxylib.MORE, 2)
+		proxylib.MORE, 6)
 	s.checkAccessLogs(c, 0, 1)
 }
 

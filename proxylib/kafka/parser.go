@@ -17,7 +17,6 @@ package kafka
 import (
 	"encoding/binary"
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
 
@@ -110,132 +109,56 @@ func init() {
 	RegisterL7RuleParser(parserName, KafkaRuleParser)
 }
 
-// This would be simpler if integrated into proxylib.Connection as on this side we can not touch the
-// 'buf' at all.
-type Reader struct {
-	buf   [][]byte
-	slice int
-	index int
-	count int
-}
-
-func (r *Reader) reset() {
-	r.slice = 0
-	r.index = 0
-	r.count = 0
-}
-
-func (r *Reader) DecodeUint32() uint32 {
-	b := make([]byte, 4)
-	n, err := io.ReadFull(r, b)
-	if err != nil {
-		if flowdebug.Enabled() {
-			log.WithError(err).Debug("io.ReadFull() failed")
-		}
-		return 0
-	}
-	if n != 4 {
-		if flowdebug.Enabled() {
-			log.Debugf("io.ReadFull() read != 4 bytes: %d", n)
-		}
-		return 0
-	}
-	return binary.BigEndian.Uint32(b)
-}
-
-func (r *Reader) Missing() int {
-	// Not enough data, ask for more and try again
-	read := r.count // how much read so far
-	if read >= 4 {
-		have := read - 4 // excluding the length field
-		// Have the length field, request the number of bytes needed
-		r.reset()                     // reset the reader to read the length
-		want := int(r.DecodeUint32()) // not including the length itself
-		if want > have {
-			return want - have
-		}
-		return 1 // likely protocol error (invalid length)
-	}
-	return 4 - read // enough for the length field
-}
-
-func (r *Reader) Read(p []byte) (n int, err error) {
-	n = 0
-	l := len(p)
-	slices := len(r.buf)
-	for n < l && r.slice < slices {
-		nc := copy(p[n:], r.buf[r.slice][r.index:])
-		if nc == len(r.buf[r.slice][r.index:]) {
-			// next slice please
-			r.slice++
-			r.index = 0
-		} else {
-			// move ahead in the same slice
-			r.index += nc
-		}
-		n += nc
-	}
-	if n == 0 {
-		return 0, io.EOF
-	}
-	r.count += n
-	return n, nil
-}
-
 type KafkaParser struct {
 	connection *Connection
 }
 
-func (pf *KafkaParserFactory) Create(connection *Connection) Parser {
+func (pf *KafkaParserFactory) Create(connection *Connection) interface{} {
 	p := KafkaParser{connection: connection}
 	return &p
 }
 
-func (p *KafkaParser) OnData(reply, endStream bool, dataArray [][]byte) (OpType, int) {
-	reader := &Reader{buf: dataArray}
-
-	length := 0
-	for i := 0; i < len(dataArray); i++ {
-		length += len(dataArray[i])
-	}
+func (p *KafkaParser) OnData(reply bool, reader *Reader) (OpType, int) {
+	length := reader.Length()
 	if length == 0 {
 		return NOP, 0
 	}
 
+	framelength := 4          // account for the length field
+	lenbuf := make([]byte, 8) // Peek the first eight bytes
+	n, err := reader.PeekFull(lenbuf)
+	if err == nil {
+		framelength += int(binary.BigEndian.Uint32(lenbuf[:4]))
+	} else {
+		// Need more data
+		return MORE, 8 - n
+	}
+
 	if reply {
-		// Replies are parsed but always passed as-is.
-		// This allows the error responses to be injected on frame boundaries.
-		resp, err := kafka.ReadResponse(reader)
-		if err != nil {
-			if err == io.ErrUnexpectedEOF || err == io.EOF {
-				// Not enough data, ask for more and try again
-				return MORE, reader.Missing()
-			}
-			if flowdebug.Enabled() {
-				log.WithError(err).Warning("Unable to parse Kafka response; closing Kafka connection")
-			}
-			return ERROR, int(ERROR_INVALID_FRAME_TYPE)
-		}
+		// Replies are always passed as-is. No need to parse them
+		// on top of the frame length and correlation ID.
+		correlationID := binary.BigEndian.Uint32(lenbuf[4:])
 		p.connection.Log(cilium.EntryType_Response,
 			&cilium.LogEntry_GenericL7{
 				GenericL7: &cilium.L7LogEntry{
 					Proto: parserName,
 					Fields: map[string]string{
-						"CorrelationID": strconv.Itoa(int(resp.GetCorrelationID())),
+						"CorrelationID": strconv.Itoa(int(correlationID)),
 					},
 				},
 			})
-		return PASS, int(reader.count)
+		return PASS, framelength
+	}
+
+	// Ask for more if full frame has not been received yet
+	if length < framelength {
+		// Not enough data, ask for more and try again
+		return MORE, framelength - length
 	}
 
 	var req KafkaRequest
-	var err error
 	req.RequestMessage, err = kafka.ReadRequest(reader)
 	if err != nil {
-		if err == io.ErrUnexpectedEOF || err == io.EOF {
-			// Not enough data, ask for more and try again
-			return MORE, reader.Missing()
-		}
 		if flowdebug.Enabled() {
 			log.WithError(err).Warning("Unable to parse Kafka request; closing Kafka connection")
 		}
@@ -263,7 +186,7 @@ func (p *KafkaParser) OnData(reply, endStream bool, dataArray [][]byte) (OpType,
 	}
 	if p.connection.Matches(req) {
 		p.connection.Log(cilium.EntryType_Request, logEntry)
-		return PASS, int(reader.count)
+		return PASS, framelength
 	}
 
 	resp, err := req.CreateAuthErrorResponse()
@@ -279,5 +202,5 @@ func (p *KafkaParser) OnData(reply, endStream bool, dataArray [][]byte) (OpType,
 	}
 
 	p.connection.Log(cilium.EntryType_Denied, logEntry)
-	return DROP, int(reader.count)
+	return DROP, framelength
 }
