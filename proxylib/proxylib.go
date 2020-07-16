@@ -29,6 +29,7 @@ import (
 	_ "github.com/cilium/cilium/proxylib/r2d2"
 	_ "github.com/cilium/cilium/proxylib/testparsers"
 
+	"github.com/cilium/cilium/pkg/flowdebug"
 	"github.com/cilium/cilium/pkg/lock"
 	log "github.com/sirupsen/logrus"
 )
@@ -41,7 +42,7 @@ var (
 )
 
 func init() {
-	log.Debug("proxylib: Initializing library")
+	log.Info("proxylib: Initializing library")
 }
 
 // Copy value string from C-memory to Go-memory.
@@ -143,6 +144,7 @@ func OpenModule(params [][2]string, debug bool) uint64 {
 	if debug {
 		mutex.Lock()
 		log.SetLevel(log.DebugLevel)
+		flowdebug.Enable()
 		mutex.Unlock()
 	}
 	// Copy strings from C-memory to Go-memory so that the string remains valid

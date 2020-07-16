@@ -105,7 +105,7 @@ type KafkaParserFactory struct{}
 var kafkaParserFactory *KafkaParserFactory
 
 func init() {
-	log.Debug("init(): Registering kafkaParserFactory")
+	log.Info("init(): Registering kafkaParserFactory")
 	RegisterParserFactory(parserName, kafkaParserFactory)
 	RegisterL7RuleParser(parserName, KafkaRuleParser)
 }
@@ -129,11 +129,15 @@ func (r *Reader) DecodeUint32() uint32 {
 	b := make([]byte, 4)
 	n, err := io.ReadFull(r, b)
 	if err != nil {
-		log.WithError(err).Debug("io.ReadFull() failed")
+		if flowdebug.Enabled() {
+			log.WithError(err).Debug("io.ReadFull() failed")
+		}
 		return 0
 	}
 	if n != 4 {
-		log.WithError(err).Debugf("io.ReadFull() read != 4 bytes: %d", n)
+		if flowdebug.Enabled() {
+			log.Debugf("io.ReadFull() read != 4 bytes: %d", n)
+		}
 		return 0
 	}
 	return binary.BigEndian.Uint32(b)

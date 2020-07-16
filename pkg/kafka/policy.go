@@ -19,7 +19,7 @@ import (
 	api "github.com/cilium/cilium/pkg/policy/api/kafka"
 
 	"github.com/optiopay/kafka/proto"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // isTopicAPIKey returns true if kind is apiKey message type which contains a
@@ -147,10 +147,7 @@ func (req *RequestMessage) RuleMatches(rule *api.PortRule) bool {
 	}
 
 	if flowdebug.Enabled() {
-		log.WithFields(logrus.Fields{
-			fieldRequest: req.String(),
-			fieldRule:    rule,
-		}).Debug("Matching Kafka rule")
+		log.Debugf("Matching Kafka request %s against rule %v", req.String(), *rule)
 	}
 
 	if !rule.CheckAPIKeyRole(req.kind) {
