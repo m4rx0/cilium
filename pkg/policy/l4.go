@@ -692,7 +692,7 @@ func (l4 *L4Filter) IsRedirect() bool {
 
 // IsEnvoyRedirect returns true if the L4 filter contains a port redirected to Envoy
 func (l4 *L4Filter) IsEnvoyRedirect() bool {
-	return l4.IsRedirect() && l4.L7Parser != ParserTypeKafka && l4.L7Parser != ParserTypeDNS
+	return l4.IsRedirect() && l4.L7Parser != ParserTypeDNS
 }
 
 // IsProxylibRedirect returns true if the L4 filter contains a port redirected to Proxylib (via Envoy)

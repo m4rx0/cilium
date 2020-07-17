@@ -51,13 +51,6 @@ const (
 	FieldMessage  = "message"
 )
 
-// fields used for structured logging of Kafka messages
-const (
-	FieldKafkaAPIKey        = "kafkaApiKey"
-	FieldKafkaAPIVersion    = "kafkaApiVersion"
-	FieldKafkaCorrelationID = "kafkaCorrelationID"
-)
-
 // LogRecord is a proxy log record based off accesslog.LogRecord.
 type LogRecord struct {
 	accesslog.LogRecord
@@ -256,13 +249,6 @@ func (logTags) HTTP(h *accesslog.LogRecordHTTP) LogTag {
 	}
 }
 
-// Kafka attaches Kafka information to the log record
-func (logTags) Kafka(k *accesslog.LogRecordKafka) LogTag {
-	return func(lr *LogRecord) {
-		lr.Kafka = k
-	}
-}
-
 // DNS attaches DNS information to the log record
 func (logTags) DNS(d *accesslog.LogRecordDNS) LogTag {
 	return func(lr *LogRecord) {
@@ -301,15 +287,6 @@ func (lr *LogRecord) getLogFields() *logrus.Entry {
 			FieldURL:      lr.HTTP.URL,
 			FieldProtocol: lr.HTTP.Protocol,
 			FieldHeader:   lr.HTTP.Headers,
-		})
-	}
-
-	if lr.Kafka != nil {
-		fields = fields.WithFields(logrus.Fields{
-			FieldCode:               lr.Kafka.ErrorCode,
-			FieldKafkaAPIKey:        lr.Kafka.APIKey,
-			FieldKafkaAPIVersion:    lr.Kafka.APIVersion,
-			FieldKafkaCorrelationID: lr.Kafka.CorrelationID,
 		})
 	}
 

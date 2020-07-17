@@ -397,7 +397,7 @@ func TestDecodeResponseTime(t *testing.T) {
 func Test_decodeKafka(t *testing.T) {
 	type args struct {
 		flowType accesslog.FlowType
-		kafka    *accesslog.LogRecordKafka
+		kafka    *accesslog.LogRecordL7
 	}
 	tests := []struct {
 		name string
@@ -408,13 +408,13 @@ func Test_decodeKafka(t *testing.T) {
 			name: "request",
 			args: args{
 				flowType: accesslog.TypeRequest,
-				kafka: &accesslog.LogRecordKafka{
-					ErrorCode:     1,
-					APIVersion:    2,
-					APIKey:        "publish",
-					CorrelationID: 3,
-					Topic: accesslog.KafkaTopic{
-						Topic: "my-topic",
+				kafka: &accesslog.LogRecordL7{
+					Fields: map[string]string{
+						"status":        "1",
+						"APIVersion":    "2",
+						"APIKey":        "publish",
+						"CorrelationID": "3",
+						"Topics":        "my-topic",
 					},
 				},
 			},
@@ -431,13 +431,13 @@ func Test_decodeKafka(t *testing.T) {
 			name: "response",
 			args: args{
 				flowType: accesslog.TypeResponse,
-				kafka: &accesslog.LogRecordKafka{
-					ErrorCode:     1,
-					APIVersion:    2,
-					APIKey:        "publish",
-					CorrelationID: 3,
-					Topic: accesslog.KafkaTopic{
-						Topic: "my-topic",
+				kafka: &accesslog.LogRecordL7{
+					Fields: map[string]string{
+						"status":        "1",
+						"APIVersion":    "2",
+						"APIKey":        "publish",
+						"CorrelationID": "3",
+						"Topics":        "my-topic",
 					},
 				},
 			},
@@ -455,11 +455,13 @@ func Test_decodeKafka(t *testing.T) {
 			name: "empty-topic",
 			args: args{
 				flowType: accesslog.TypeResponse,
-				kafka: &accesslog.LogRecordKafka{
-					ErrorCode:     1,
-					APIVersion:    2,
-					APIKey:        "publish",
-					CorrelationID: 3,
+				kafka: &accesslog.LogRecordL7{
+					Fields: map[string]string{
+						"status":        "1",
+						"APIVersion":    "2",
+						"APIKey":        "publish",
+						"CorrelationID": "3",
+					},
 				},
 			},
 			want: &pb.Layer7_Kafka{

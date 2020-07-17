@@ -21,6 +21,7 @@ import (
 	"net"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -395,11 +396,16 @@ func decodeLayer7(r *accesslog.LogRecord) *pb.Layer7 {
 			Type:   flowType,
 			Record: decodeHTTP(r.Type, r.HTTP),
 		}
-	case r.Kafka != nil:
+	case r.L7 != nil && r.L7.Proto == "kafka":
 		return &pb.Layer7{
 			Type:   flowType,
-			Record: decodeKafka(r.Type, r.Kafka),
+			Record: decodeKafka(r.Type, r.L7),
 		}
+	// case r.L7 != nil:
+	// 	return &pb.Layer7{
+	// 		Type:   flowType,
+	// 		Record: decodeL7(r.Type, r.L7),
+	//	}
 	default:
 		return &pb.Layer7{
 			Type: flowType,
@@ -502,7 +508,7 @@ func (p *Parser) getSummary(logRecord *accesslog.LogRecord, flow *pb.Flow) strin
 	}
 	if http := logRecord.HTTP; http != nil {
 		return p.httpSummary(logRecord.Type, http, flow)
-	} else if kafka := logRecord.Kafka; kafka != nil {
+	} else if l7 := logRecord.L7; l7 != nil && l7.Proto == "kafka" {
 		return kafkaSummary(flow)
 	} else if dns := logRecord.DNS; dns != nil {
 		return dnsSummary(logRecord.Type, dns)
@@ -513,24 +519,28 @@ func (p *Parser) getSummary(logRecord *accesslog.LogRecord, flow *pb.Flow) strin
 	return ""
 }
 
-func decodeKafka(flowType accesslog.FlowType, kafka *accesslog.LogRecordKafka) *pb.Layer7_Kafka {
+func decodeKafka(flowType accesslog.FlowType, l7 *accesslog.LogRecordL7) *pb.Layer7_Kafka {
+	apiVersion, _ := strconv.Atoi(l7.Fields["APIVersion"])
+	correlationID, _ := strconv.Atoi(l7.Fields["CorrelationID"])
+	errorCode, _ := strconv.Atoi(l7.Fields["status"])
+
 	if flowType == accesslog.TypeRequest {
 		return &pb.Layer7_Kafka{
 			Kafka: &pb.Kafka{
-				ApiVersion:    int32(kafka.APIVersion),
-				ApiKey:        kafka.APIKey,
-				CorrelationId: kafka.CorrelationID,
-				Topic:         kafka.Topic.Topic,
+				ApiVersion:    int32(apiVersion),
+				ApiKey:        l7.Fields["APIKey"],
+				CorrelationId: int32(correlationID),
+				Topic:         l7.Fields["Topics"],
 			},
 		}
 	}
 	return &pb.Layer7_Kafka{
 		Kafka: &pb.Kafka{
-			ErrorCode:     int32(kafka.ErrorCode),
-			ApiVersion:    int32(kafka.APIVersion),
-			ApiKey:        kafka.APIKey,
-			CorrelationId: kafka.CorrelationID,
-			Topic:         kafka.Topic.Topic,
+			ErrorCode:     int32(errorCode),
+			ApiVersion:    int32(apiVersion),
+			ApiKey:        l7.Fields["APIKey"],
+			CorrelationId: int32(correlationID),
+			Topic:         l7.Fields["Topics"],
 		},
 	}
 }

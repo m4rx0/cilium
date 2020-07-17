@@ -181,6 +181,11 @@ func (req *RequestMessage) CreateResponse(err error) (*ResponseMessage, error) {
 	return nil, nil
 }
 
+// CreateAuthErrorResponse creates Authorization error response message for 'req'
+func (req *RequestMessage) CreateAuthErrorResponse() (*ResponseMessage, error) {
+	return req.CreateResponse(proto.ErrTopicAuthorizationFailed)
+}
+
 // ReadRequest will read a Kafka request from an io.Reader and return the
 // message or an error.
 func ReadRequest(reader io.Reader) (*RequestMessage, error) {

@@ -467,6 +467,36 @@ func getL7Rule(l7 *api.PortRuleL7) *cilium.L7NetworkPolicyRule {
 	return rule
 }
 
+func getKafkaL7Rules(l7Rules []api.PortRuleKafka) *cilium.L7NetworkPolicyRules {
+	allowRules := make([]*cilium.L7NetworkPolicyRule, 0, len(l7Rules))
+	for _, kr := range l7Rules {
+		// proxylib go extension key/value policy
+		rule := &cilium.L7NetworkPolicyRule{Rule: make(map[string]string, len(l7Rules))}
+		if kr.Role != "" {
+			rule.Rule["role"] = kr.Role
+		}
+		if kr.APIKey != "" {
+			rule.Rule["apikey"] = kr.APIKey
+		}
+		if kr.APIVersion != "" {
+			rule.Rule["apiversion"] = kr.APIVersion
+		}
+		if kr.ClientID != "" {
+			rule.Rule["clientid"] = kr.ClientID
+		}
+		if kr.Topic != "" {
+			rule.Rule["topic"] = kr.Topic
+		}
+		allowRules = append(allowRules, rule)
+	}
+
+	rules := &cilium.L7NetworkPolicyRules{}
+	if len(allowRules) > 0 {
+		rules.L7Rules = allowRules
+	}
+	return rules
+}
+
 func getSecretString(certManager policy.CertificateManager, hdr *api.HeaderMatch, ns string) (string, error) {
 	value := ""
 	var err error
@@ -812,7 +842,14 @@ func getPortNetworkPolicyRule(sel policy.CachedSelector, l7Parser policy.L7Parse
 		}
 
 	case policy.ParserTypeKafka:
-		// TODO: Support Kafka. For now, just ignore any Kafka L7 rule.
+		// Kafka is implemented as an Envoy Go Extension
+		if len(l7Rules.Kafka) > 0 {
+			// L7 rules are not sorted
+			r.L7Proto = l7Parser.String()
+			r.L7 = &cilium.PortNetworkPolicyRule_L7Rules{
+				L7Rules: getKafkaL7Rules(l7Rules.Kafka),
+			}
+		}
 
 	case policy.ParserTypeDNS:
 		// TODO: Support DNS. For now, just ignore any DNS L7 rule.

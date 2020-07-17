@@ -51,7 +51,7 @@ func isTopicAPIKey(kind int16) bool {
 	return false
 }
 
-func matchNonTopicRequests(req *RequestMessage, rule api.PortRuleKafka) bool {
+func matchNonTopicRequests(req *RequestMessage, rule *api.PortRuleKafka) bool {
 	// matchNonTopicRequests() is called when
 	// the kafka parser was not able to parse beyond the generic header.
 	// This could be due to 2 sceanrios:
@@ -69,7 +69,7 @@ func matchNonTopicRequests(req *RequestMessage, rule api.PortRuleKafka) bool {
 	return true
 }
 
-func matchProduceReq(req *proto.ProduceReq, rule api.PortRuleKafka) bool {
+func matchProduceReq(req *proto.ProduceReq, rule *api.PortRuleKafka) bool {
 	if req == nil {
 		return false
 	}
@@ -81,7 +81,7 @@ func matchProduceReq(req *proto.ProduceReq, rule api.PortRuleKafka) bool {
 	return true
 }
 
-func matchFetchReq(req *proto.FetchReq, rule api.PortRuleKafka) bool {
+func matchFetchReq(req *proto.FetchReq, rule *api.PortRuleKafka) bool {
 	if req == nil {
 		return false
 	}
@@ -93,7 +93,7 @@ func matchFetchReq(req *proto.FetchReq, rule api.PortRuleKafka) bool {
 	return true
 }
 
-func matchOffsetReq(req *proto.OffsetReq, rule api.PortRuleKafka) bool {
+func matchOffsetReq(req *proto.OffsetReq, rule *api.PortRuleKafka) bool {
 	if req == nil {
 		return false
 	}
@@ -105,7 +105,7 @@ func matchOffsetReq(req *proto.OffsetReq, rule api.PortRuleKafka) bool {
 	return true
 }
 
-func matchMetadataReq(req *proto.MetadataReq, rule api.PortRuleKafka) bool {
+func matchMetadataReq(req *proto.MetadataReq, rule *api.PortRuleKafka) bool {
 	if req == nil {
 		return false
 	}
@@ -117,7 +117,7 @@ func matchMetadataReq(req *proto.MetadataReq, rule api.PortRuleKafka) bool {
 	return true
 }
 
-func matchOffsetCommitReq(req *proto.OffsetCommitReq, rule api.PortRuleKafka) bool {
+func matchOffsetCommitReq(req *proto.OffsetCommitReq, rule *api.PortRuleKafka) bool {
 	if req == nil {
 		return false
 	}
@@ -129,7 +129,7 @@ func matchOffsetCommitReq(req *proto.OffsetCommitReq, rule api.PortRuleKafka) bo
 	return true
 }
 
-func matchOffsetFetchReq(req *proto.OffsetFetchReq, rule api.PortRuleKafka) bool {
+func matchOffsetFetchReq(req *proto.OffsetFetchReq, rule *api.PortRuleKafka) bool {
 	if req == nil {
 		return false
 	}
@@ -141,15 +141,17 @@ func matchOffsetFetchReq(req *proto.OffsetFetchReq, rule api.PortRuleKafka) bool
 	return true
 }
 
-func (req *RequestMessage) ruleMatches(rule api.PortRuleKafka) bool {
+func (req *RequestMessage) RuleMatches(rule *api.PortRuleKafka) bool {
 	if req == nil {
 		return false
 	}
 
-	flowdebug.Log(log.WithFields(logrus.Fields{
-		fieldRequest: req.String(),
-		fieldRule:    rule,
-	}), "Matching Kafka rule")
+	if flowdebug.Enabled() {
+		log.WithFields(logrus.Fields{
+			fieldRequest: req.String(),
+			fieldRule:    rule,
+		}).Debug("Matching Kafka rule")
+	}
 
 	if !rule.CheckAPIKeyRole(req.kind) {
 		return false
@@ -209,11 +211,11 @@ func (req *RequestMessage) MatchesRule(rules []api.PortRuleKafka) bool {
 
 	for _, rule := range rules {
 		if rule.Topic == "" || len(topics) == 0 {
-			if req.ruleMatches(rule) {
+			if req.RuleMatches(&rule) {
 				return true
 			}
 		} else if reqTopicsMap[rule.Topic] {
-			if req.ruleMatches(rule) {
+			if req.RuleMatches(&rule) {
 				delete(reqTopicsMap, rule.Topic)
 				if len(reqTopicsMap) == 0 {
 					return true
