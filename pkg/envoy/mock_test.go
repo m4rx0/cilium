@@ -14,7 +14,7 @@
 
 // +build !privileged_tests
 
-package proxy
+package envoy
 
 import (
 	"github.com/cilium/cilium/pkg/identity"
@@ -26,12 +26,12 @@ import (
 
 type ProxyUpdaterMock struct {
 	lock.RWMutex
-	id              uint64
-	ipv4            string
-	ipv6            string
-	labels          []string
-	identity        identity.NumericIdentity
-	hasSidecarProxy bool
+	Id       uint64
+	Ipv4     string
+	Ipv6     string
+	Labels   []string
+	Identity identity.NumericIdentity
+	Sidecar  bool
 }
 
 func (m *ProxyUpdaterMock) GetProxyInfoByFields() (uint64, string, string, []string, string, uint64, error) {
@@ -41,21 +41,21 @@ func (m *ProxyUpdaterMock) GetProxyInfoByFields() (uint64, string, string, []str
 func (m *ProxyUpdaterMock) UnconditionalRLock() { m.RWMutex.RLock() }
 func (m *ProxyUpdaterMock) RUnlock()            { m.RWMutex.RUnlock() }
 
-func (m *ProxyUpdaterMock) GetID() uint64                                      { return m.id }
-func (m *ProxyUpdaterMock) GetIPv4Address() string                             { return m.ipv4 }
-func (m *ProxyUpdaterMock) GetIPv6Address() string                             { return m.ipv6 }
-func (m *ProxyUpdaterMock) GetLabels() []string                                { return m.labels }
+func (m *ProxyUpdaterMock) GetID() uint64                                      { return m.Id }
+func (m *ProxyUpdaterMock) GetIPv4Address() string                             { return m.Ipv4 }
+func (m *ProxyUpdaterMock) GetIPv6Address() string                             { return m.Ipv6 }
+func (m *ProxyUpdaterMock) GetLabels() []string                                { return m.Labels }
 func (m *ProxyUpdaterMock) GetEgressPolicyEnabledLocked() bool                 { return true }
 func (m *ProxyUpdaterMock) GetIngressPolicyEnabledLocked() bool                { return true }
-func (m *ProxyUpdaterMock) GetIdentityLocked() identity.NumericIdentity        { return m.identity }
+func (m *ProxyUpdaterMock) GetIdentityLocked() identity.NumericIdentity        { return m.Identity }
 func (m *ProxyUpdaterMock) GetNamedPortsMap(ingress bool) policy.NamedPortsMap { return nil }
 func (m *ProxyUpdaterMock) ProxyID(l4 *policy.L4Filter) (string, error) {
 	return "", nil
 }
 func (m *ProxyUpdaterMock) GetLabelsSHA() string {
-	return labels.NewLabelsFromModel(m.labels).SHA256Sum()
+	return labels.NewLabelsFromModel(m.Labels).SHA256Sum()
 }
-func (m *ProxyUpdaterMock) HasSidecarProxy() bool       { return m.hasSidecarProxy }
+func (m *ProxyUpdaterMock) HasSidecarProxy() bool       { return m.Sidecar }
 func (m *ProxyUpdaterMock) ConntrackName() string       { return m.ConntrackNameLocked() }
 func (m *ProxyUpdaterMock) ConntrackNameLocked() string { return "global" }
 

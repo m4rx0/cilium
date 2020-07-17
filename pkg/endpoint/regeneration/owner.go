@@ -62,7 +62,7 @@ type EndpointInfoSource interface {
 	ConntrackNameLocked() string
 	GetIngressPolicyEnabledLocked() bool
 	GetEgressPolicyEnabledLocked() bool
-	ProxyID(npMap policy.NamedPortsMap, l4 *policy.L4Filter) (string, error)
+	ProxyID(l4 *policy.L4Filter) (string, error)
 	GetProxyInfoByFields() (uint64, string, string, []string, string, uint64, error)
 }
 

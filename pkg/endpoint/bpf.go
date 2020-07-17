@@ -211,7 +211,7 @@ func (e *Endpoint) addNewRedirectsFromDesiredPolicy(ingress bool, desiredRedirec
 				var finalizeFunc revert.FinalizeFunc
 				var revertFunc revert.RevertFunc
 
-				proxyID, err := e.ProxyID(e.desiredPolicy.NamedPortsMap, l4)
+				proxyID, err := e.ProxyID(l4)
 				if err != nil {
 					// skip redirects for which a proxyID cannot be created.
 					// Right now this happens only due to named port mapping not existing and
@@ -259,7 +259,7 @@ func (e *Endpoint) addNewRedirectsFromDesiredPolicy(ingress bool, desiredRedirec
 				direction = trafficdirection.Egress
 			}
 
-			keysFromFilter := l4.ToMapState(e.desiredPolicy.NamedPortsMap, direction)
+			keysFromFilter := l4.ToMapState(e, direction)
 
 			for keyFromFilter, entry := range keysFromFilter {
 				if oldEntry, ok := e.desiredPolicy.PolicyMapState[keyFromFilter]; ok {

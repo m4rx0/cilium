@@ -109,7 +109,7 @@ func (d *DummySelectorCacheUser) IdentitySelectionUpdated(selector policy.Cached
 }
 
 var (
-	localEndpointMock logger.EndpointUpdater = &proxyUpdaterMock{
+	localEndpointMock logger.EndpointUpdater = &ProxyUpdaterMock{
 		id:       1000,
 		ipv4:     "10.0.0.1",
 		ipv6:     "f00d::1",

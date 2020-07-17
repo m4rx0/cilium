@@ -381,7 +381,7 @@ func (npm NamedPortMultiMap) GetNamedPort(name string, proto uint8) (port uint16
 // Note: It is possible for two selectors to select the same security ID.
 // To give priority for L7 redirection (e.g., for visibility purposes), we use
 // RedirectPreferredInsert() instead of directly inserting the value to the map.
-func (l4 *L4Filter) ToMapState(npMap NamedPortsMap, direction trafficdirection.TrafficDirection) MapState {
+func (l4 *L4Filter) ToMapState(policyOwner PolicyOwner, direction trafficdirection.TrafficDirection) MapState {
 	port := uint16(l4.Port)
 	proto := uint8(l4.U8Proto)
 
@@ -400,6 +400,7 @@ func (l4 *L4Filter) ToMapState(npMap NamedPortsMap, direction trafficdirection.T
 	// resolve named port
 	if port == 0 && l4.PortName != "" {
 		var err error
+		npMap := policyOwner.GetNamedPortsMap(l4.Ingress)
 		port, err = npMap.GetNamedPort(l4.PortName, proto)
 		if err != nil {
 			logger.Debugf("ToMapState: Skipping named port: %s", err)
@@ -968,7 +969,8 @@ func (l4 *L4Policy) AccumulateMapChanges(adds, deletes []identity.NumericIdentit
 		// resolve named port
 		if port == 0 && l4Filter.PortName != "" {
 			var err error
-			port, err = epPolicy.NamedPortsMap.GetNamedPort(l4Filter.PortName, proto)
+			npMap := epPolicy.PolicyOwner.GetNamedPortsMap(direction == trafficdirection.Ingress)
+			port, err = npMap.GetNamedPort(l4Filter.PortName, proto)
 			if err != nil {
 				if option.Config.Debug {
 					logger := log.WithFields(logrus.Fields{
