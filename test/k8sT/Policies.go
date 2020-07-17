@@ -1186,7 +1186,7 @@ var _ = Describe("K8sPolicyTest", func() {
 					By("Reconfiguring Cilium to disable remote-node identity")
 					newCfg := map[string]string{
 						"global.remoteNodeIdentity": "false",
-						"global.hostFirewall":       "false",
+						"global.hostFirewall":       "true",
 					}
 					for k, v := range daemonCfg {
 						if _, ok := newCfg[k]; !ok {
