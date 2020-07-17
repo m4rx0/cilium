@@ -17,6 +17,7 @@ cilium-operator [flags]
 ```
       --aws-instance-limit-mapping map          Add or overwrite mappings of AWS instance limit in the form of {"AWS instance type": "Maximum Network Interfaces","IPv4 Addresses per Interface","IPv6 Addresses per Interface"}. cli example: --aws-instance-limit-mapping=a1.medium=2,4,4 --aws-instance-limit-mapping=a2.somecustomflavor=4,5,6 configmap example: {"a1.medium": "2,4,4", "a2.somecustomflavor": "4,5,6"} (default map[])
       --aws-release-excess-ips                  Enable releasing excess free IP addresses from AWS ENI.
+      --azure-cloud-name string                 Name of the Azure cloud being used (default "AzurePublicCloud")
       --azure-resource-group string             Resource group to use for Azure IPAM
       --azure-subscription-id string            Subscription ID to access Azure API
       --cilium-endpoint-gc-interval duration    GC interval for cilium endpoints (default 5m0s)
@@ -67,6 +68,7 @@ cilium-operator [flags]
       --synchronize-k8s-services                Synchronize Kubernetes services to kvstore (default true)
       --unmanaged-pod-watcher-interval int      Interval to check for unmanaged kube-dns pods (0 to disable) (default 15)
       --update-ec2-apdater-limit-via-api        Use the EC2 API to update the instance type to adapter limits
+      --user-assigned-identity-name string      Name of the user assigned identity used to auth with the Azure API
       --version                                 Print version information
 ```
 
