@@ -25,7 +25,7 @@ import (
 	"strings"
 
 	"github.com/google/gofuzz"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 // IntOrString is a type that can hold an int32 or a string.  When used in
