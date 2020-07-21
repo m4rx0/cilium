@@ -75,7 +75,7 @@ func (e *Endpoint) GetNamedPortLocked(ingress bool, name string, proto uint8) ui
 
 func (e *Endpoint) getNamedPort(npMap policy.NamedPortsMap, ingress bool, name string, proto uint8) uint16 {
 	port, err := npMap.GetNamedPort(name, proto)
-	if err != nil && err != policy.ErrUnknownNamedPort {
+	if err != nil && err != policy.ErrUnknownNamedPort && e.logLimiter.Allow() {
 		direction := "egress"
 		if ingress {
 			direction = "ingress"
