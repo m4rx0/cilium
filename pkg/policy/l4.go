@@ -381,6 +381,7 @@ func (npm NamedPortMultiMap) GetNamedPort(name string, proto uint8) (port uint16
 // Note: It is possible for two selectors to select the same security ID.
 // To give priority for L7 redirection (e.g., for visibility purposes), we use
 // RedirectPreferredInsert() instead of directly inserting the value to the map.
+// PolicyOwner (aka Endpoint) is locked during this call.
 func (l4 *L4Filter) ToMapState(policyOwner PolicyOwner, direction trafficdirection.TrafficDirection) MapState {
 	port := uint16(l4.Port)
 	proto := uint8(l4.U8Proto)
@@ -400,7 +401,7 @@ func (l4 *L4Filter) ToMapState(policyOwner PolicyOwner, direction trafficdirecti
 	// resolve named port
 	if port == 0 && l4.PortName != "" {
 		var err error
-		npMap := policyOwner.GetNamedPortsMap(l4.Ingress)
+		npMap := policyOwner.GetNamedPortsMapLocked(l4.Ingress)
 		port, err = npMap.GetNamedPort(l4.PortName, proto)
 		if err != nil {
 			logger.Debugf("ToMapState: Skipping named port: %s", err)
@@ -918,6 +919,8 @@ type L4Policy struct {
 
 	// Endpoint policies using this L4Policy
 	// These are circular references, cleaned up in Detach()
+	// This mutex is taken while Endpoint mutex is held, so Endpoint lock
+	// MUST always be taken before this mutex.
 	mutex lock.RWMutex
 	users map[*EndpointPolicy]struct{}
 }
@@ -964,8 +967,16 @@ func (l4 *L4Policy) AccumulateMapChanges(adds, deletes []identity.NumericIdentit
 	proto := uint8(l4Filter.U8Proto)
 	derivedFrom := l4Filter.DerivedFromRules
 
+	// Must take a copy of 'users' as GetNamedPortsMap() will lock the Endpoint below and
+	// the Endpoint lock may not be taken while 'l4.mutex' is held.
 	l4.mutex.RLock()
-	for epPolicy := range l4.users {
+	users := make(map[*EndpointPolicy]struct{}, len(l4.users))
+	for user := range l4.users {
+		users[user] = struct{}{}
+	}
+	l4.mutex.RUnlock()
+
+	for epPolicy := range users {
 		// resolve named port
 		if port == 0 && l4Filter.PortName != "" {
 			var err error
@@ -988,7 +999,6 @@ func (l4 *L4Policy) AccumulateMapChanges(adds, deletes []identity.NumericIdentit
 
 		epPolicy.policyMapChanges.AccumulateMapChanges(adds, deletes, port, proto, direction, redirect, derivedFrom)
 	}
-	l4.mutex.RUnlock()
 }
 
 // Detach makes the L4Policy ready for garbage collection, removing

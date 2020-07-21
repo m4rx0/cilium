@@ -76,8 +76,9 @@ type EndpointPolicy struct {
 // PolicyOwner is anything which consumes a EndpointPolicy.
 type PolicyOwner interface {
 	GetID() uint64
-	LookupRedirectPortLocked(l4 *L4Filter) uint16
+	LookupRedirectPortLocked(ingress bool, protocol string, port uint16) uint16
 	GetNamedPortsMap(ingress bool) NamedPortsMap
+	GetNamedPortsMapLocked(ingress bool) NamedPortsMap
 }
 
 // newSelectorPolicy returns an empty selectorPolicy stub.
@@ -165,9 +166,11 @@ func (p *EndpointPolicy) computeDirectionL4PolicyMapEntries(l4PolicyMap L4Policy
 		for keyFromFilter, entry := range keysFromFilter {
 			// Fix up the proxy port for entries that need proxy redirection
 			if entry.IsRedirectEntry() {
-				if !lookupDone {
+				if !lookupDone && filter.IsRedirect() {
 					// only lookup once for each filter
-					proxyport = p.PolicyOwner.LookupRedirectPortLocked(filter)
+					// Use 'destPort' from the key as it is already resolved
+					// from a named port if needed.
+					proxyport = p.PolicyOwner.LookupRedirectPortLocked(filter.Ingress, string(filter.Protocol), keyFromFilter.DestPort)
 					lookupDone = true
 				}
 				entry.ProxyPort = proxyport

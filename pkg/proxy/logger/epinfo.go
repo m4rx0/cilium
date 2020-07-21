@@ -42,7 +42,7 @@ type EndpointInfoSource interface {
 	GetIngressPolicyEnabledLocked() bool
 	GetEgressPolicyEnabledLocked() bool
 	GetNamedPortsMap(ingress bool) policy.NamedPortsMap
-	ProxyID(l4 *policy.L4Filter) (string, error)
+	GetNamedPortsMapLocked(ingress bool) policy.NamedPortsMap
 	GetProxyInfoByFields() (uint64, string, string, []string, string, uint64, error)
 }
 

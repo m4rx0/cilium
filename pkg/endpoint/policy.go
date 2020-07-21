@@ -45,7 +45,19 @@ import (
 )
 
 // GetNamedPortsMap returns the map of named ports relevant for the given direction
+// Must be called with e.mutex NOT held
 func (e *Endpoint) GetNamedPortsMap(ingress bool) policy.NamedPortsMap {
+	if ingress {
+		// Ingress only needs the ports of the POD itself
+		return e.GetK8sPorts()
+	}
+	// egress needs named ports of all the pods
+	return ipcache.IPIdentityCache.GetNamedPorts()
+}
+
+// GetNamedPortsMapLocked returns the map of named ports relevant for the given direction
+// Must be called with e.mutex held.
+func (e *Endpoint) GetNamedPortsMapLocked(ingress bool) policy.NamedPortsMap {
 	if ingress {
 		// Ingress only needs the ports of the POD itself
 		return e.k8sPorts
@@ -54,11 +66,12 @@ func (e *Endpoint) GetNamedPortsMap(ingress bool) policy.NamedPortsMap {
 	return ipcache.IPIdentityCache.GetNamedPorts()
 }
 
-// ProxyID returns a unique string to identify a proxy mapping.
-func (e *Endpoint) ProxyID(l4 *policy.L4Filter) (id string, err error) {
+// proxyID returns a unique string to identify a proxy mapping.
+// Must be called with e.mutex held.
+func (e *Endpoint) proxyID(l4 *policy.L4Filter) (id string, err error) {
 	port := uint16(l4.Port)
 	if port == 0 && l4.PortName != "" {
-		npMap := e.GetNamedPortsMap(l4.Ingress)
+		npMap := e.GetNamedPortsMapLocked(l4.Ingress)
 		port, err = npMap.GetNamedPort(l4.PortName, uint8(l4.U8Proto))
 		if err != nil {
 			return "", err
@@ -70,17 +83,9 @@ func (e *Endpoint) ProxyID(l4 *policy.L4Filter) (id string, err error) {
 // lookupRedirectPort returns the redirect L4 proxy port for the given L4
 // policy map key, in host byte order. Returns 0 if not found or the
 // filter doesn't require a redirect.
-// Must be called with Endpoint.Mutex held.
-func (e *Endpoint) LookupRedirectPortLocked(l4Filter *policy.L4Filter) uint16 {
-	if !l4Filter.IsRedirect() {
-		return 0
-	}
-	proxyID, err := e.ProxyID(l4Filter)
-	if err != nil {
-		e.getLogger().WithError(err).Warn("ProxyID failed")
-		return 0
-	}
-	return e.realizedRedirects[proxyID]
+// Must be called with Endpoint.mutex held.
+func (e *Endpoint) LookupRedirectPortLocked(ingress bool, protocol string, port uint16) uint16 {
+	return e.realizedRedirects[policy.ProxyID(e.ID, ingress, protocol, port)]
 }
 
 // Note that this function assumes that endpoint policy has already been generated!
