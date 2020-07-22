@@ -18,7 +18,6 @@ import (
 	"net"
 
 	"github.com/cilium/cilium/pkg/identity"
-	"github.com/cilium/cilium/pkg/policy"
 	"github.com/cilium/cilium/pkg/proxy/accesslog"
 )
 
@@ -41,8 +40,7 @@ type EndpointInfoSource interface {
 	ConntrackNameLocked() string
 	GetIngressPolicyEnabledLocked() bool
 	GetEgressPolicyEnabledLocked() bool
-	GetNamedPortsMap(ingress bool) policy.NamedPortsMap
-	GetNamedPortsMapLocked(ingress bool) policy.NamedPortsMap
+	GetNamedPortLocked(ingress bool, name string, proto uint8) uint16
 	GetProxyInfoByFields() (uint64, string, string, []string, string, uint64, error)
 }
 

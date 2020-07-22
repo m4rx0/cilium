@@ -174,18 +174,16 @@ func GenerateCIDRRules(numRules int) api.Rules {
 
 type DummyOwner struct{}
 
-func (d DummyOwner) LookupRedirectPortLocked(l4 *L4Filter) uint16 {
-	// Return a fake non-0 listening port number for redirect filters.
-	if l4.IsRedirect() {
-		return 4242
-	}
-	return 0
+func (d DummyOwner) LookupRedirectPortLocked(bool, string, uint16) uint16 {
+	return 4242
 }
 
-func (d DummyOwner) GetNamedPortsMap(ingress bool) NamedPortsMap {
-	return NamedPortMap{
-		"port-80": PortProto{Proto: uint8(0), Port: uint16(80)},
-	}
+func (d DummyOwner) GetNamedPort(ingress bool, name string, proto uint8) uint16 {
+	return 80
+}
+
+func (d DummyOwner) GetNamedPortLocked(ingress bool, name string, proto uint8) uint16 {
+	return 80
 }
 
 func (d DummyOwner) GetID() uint64 {

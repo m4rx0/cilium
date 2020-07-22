@@ -20,7 +20,6 @@ import (
 	"github.com/cilium/cilium/pkg/identity"
 	"github.com/cilium/cilium/pkg/labels"
 	"github.com/cilium/cilium/pkg/lock"
-	"github.com/cilium/cilium/pkg/policy"
 	"github.com/cilium/cilium/pkg/proxy/accesslog"
 )
 
@@ -41,17 +40,14 @@ func (m *ProxyUpdaterMock) GetProxyInfoByFields() (uint64, string, string, []str
 func (m *ProxyUpdaterMock) UnconditionalRLock() { m.RWMutex.RLock() }
 func (m *ProxyUpdaterMock) RUnlock()            { m.RWMutex.RUnlock() }
 
-func (m *ProxyUpdaterMock) GetID() uint64                                      { return m.id }
-func (m *ProxyUpdaterMock) GetIPv4Address() string                             { return m.ipv4 }
-func (m *ProxyUpdaterMock) GetIPv6Address() string                             { return m.ipv6 }
-func (m *ProxyUpdaterMock) GetLabels() []string                                { return m.labels }
-func (m *ProxyUpdaterMock) GetEgressPolicyEnabledLocked() bool                 { return true }
-func (m *ProxyUpdaterMock) GetIngressPolicyEnabledLocked() bool                { return true }
-func (m *ProxyUpdaterMock) GetIdentityLocked() identity.NumericIdentity        { return m.identity }
-func (m *ProxyUpdaterMock) GetNamedPortsMap(ingress bool) policy.NamedPortsMap { return nil }
-func (m *ProxyUpdaterMock) ProxyID(l4 *policy.L4Filter) (string, error) {
-	return "", nil
-}
+func (m *ProxyUpdaterMock) GetID() uint64                                 { return m.id }
+func (m *ProxyUpdaterMock) GetIPv4Address() string                        { return m.ipv4 }
+func (m *ProxyUpdaterMock) GetIPv6Address() string                        { return m.ipv6 }
+func (m *ProxyUpdaterMock) GetLabels() []string                           { return m.labels }
+func (m *ProxyUpdaterMock) GetEgressPolicyEnabledLocked() bool            { return true }
+func (m *ProxyUpdaterMock) GetIngressPolicyEnabledLocked() bool           { return true }
+func (m *ProxyUpdaterMock) GetIdentityLocked() identity.NumericIdentity   { return m.identity }
+func (m *ProxyUpdaterMock) GetNamedPortLocked(bool, string, uint8) uint16 { return uint16(0) }
 func (m *ProxyUpdaterMock) GetLabelsSHA() string {
 	return labels.NewLabelsFromModel(m.labels).SHA256Sum()
 }

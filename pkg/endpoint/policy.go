@@ -40,44 +40,66 @@ import (
 	"github.com/cilium/cilium/pkg/option"
 	"github.com/cilium/cilium/pkg/policy"
 	"github.com/cilium/cilium/pkg/revert"
+	"github.com/cilium/cilium/pkg/u8proto"
 
 	"github.com/sirupsen/logrus"
 )
 
-// GetNamedPortsMap returns the map of named ports relevant for the given direction
+// GetNamedPort returns the port for the given name.
 // Must be called with e.mutex NOT held
-func (e *Endpoint) GetNamedPortsMap(ingress bool) policy.NamedPortsMap {
+func (e *Endpoint) GetNamedPort(ingress bool, name string, proto uint8) uint16 {
+	var npMap policy.NamedPortsMap
 	if ingress {
 		// Ingress only needs the ports of the POD itself
-		return e.GetK8sPorts()
+		npMap = e.GetK8sPorts()
+	} else {
+		// egress needs named ports of all the pods
+		npMap = ipcache.IPIdentityCache.GetNamedPorts()
 	}
-	// egress needs named ports of all the pods
-	return ipcache.IPIdentityCache.GetNamedPorts()
+	return e.getNamedPort(npMap, ingress, name, proto)
 }
 
-// GetNamedPortsMapLocked returns the map of named ports relevant for the given direction
+// GetNamedPortLocked returns port for the given name. May return an invalid (0) port
 // Must be called with e.mutex held.
-func (e *Endpoint) GetNamedPortsMapLocked(ingress bool) policy.NamedPortsMap {
+func (e *Endpoint) GetNamedPortLocked(ingress bool, name string, proto uint8) uint16 {
+	var npMap policy.NamedPortsMap
 	if ingress {
 		// Ingress only needs the ports of the POD itself
-		return e.k8sPorts
+		npMap = e.k8sPorts
+	} else {
+		// egress needs named ports of all the pods
+		npMap = ipcache.IPIdentityCache.GetNamedPorts()
 	}
-	// egress needs named ports of all the pods
-	return ipcache.IPIdentityCache.GetNamedPorts()
+	return e.getNamedPort(npMap, ingress, name, proto)
+}
+
+func (e *Endpoint) getNamedPort(npMap policy.NamedPortsMap, ingress bool, name string, proto uint8) uint16 {
+	port, err := npMap.GetNamedPort(name, proto)
+	if err != nil && err != policy.ErrUnknownNamedPort {
+		direction := "egress"
+		if ingress {
+			direction = "ingress"
+		}
+		e.getLogger().WithFields(logrus.Fields{
+			logfields.PortName:         name,
+			logfields.Protocol:         u8proto.U8proto(proto).String(),
+			logfields.TrafficDirection: direction,
+		}).WithError(err).Warning("Skipping named port")
+	}
+	return port
 }
 
 // proxyID returns a unique string to identify a proxy mapping.
 // Must be called with e.mutex held.
-func (e *Endpoint) proxyID(l4 *policy.L4Filter) (id string, err error) {
+func (e *Endpoint) proxyID(l4 *policy.L4Filter) string {
 	port := uint16(l4.Port)
 	if port == 0 && l4.PortName != "" {
-		npMap := e.GetNamedPortsMapLocked(l4.Ingress)
-		port, err = npMap.GetNamedPort(l4.PortName, uint8(l4.U8Proto))
-		if err != nil {
-			return "", err
+		port = e.GetNamedPortLocked(l4.Ingress, l4.PortName, uint8(l4.U8Proto))
+		if port == 0 {
+			return ""
 		}
 	}
-	return policy.ProxyID(e.ID, l4.Ingress, string(l4.Protocol), port), nil
+	return policy.ProxyID(e.ID, l4.Ingress, string(l4.Protocol), port)
 }
 
 // lookupRedirectPort returns the redirect L4 proxy port for the given L4
